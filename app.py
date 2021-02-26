@@ -35,6 +35,11 @@ def get_table_name():
     appconfig.update_config()
     return appconfig.config["TableName"]
 
+@app.route('/refresh-config')
+def refresh():
+    result = "Config Refreshed" if appconfig.update_config(force=True) else "Nothing to refresh"
+    return result
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

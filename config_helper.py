@@ -50,14 +50,14 @@ class AppConfigHelper:
     def config(self) -> dict:
         return self._config
 
-    def update_config(self) -> bool:
+    def update_config(self, force: bool = False) -> bool:
         """Request the lastest configration.
         Returns True if a new version of configuration was received. False
         indicates that no attempt was made, or that no new version was found.
         """
         if (
             time.time() - self._last_update_time < self.expire
-        ):
+        ) and not force:
             return False
 
         response = self._client.get_configuration(
