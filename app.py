@@ -26,7 +26,7 @@ def health():
 def hello_world():
     """Display hello message using the information from the Dynamo table
         """
-    ddb_client = boto3.client('dynamodb',ß
+    ddb_client = boto3.client('dynamodb',
                               region_name=os.environ['AWS_DEFAULT_REGION'])
     TABLE_NAME = get_table_name()
     try:
