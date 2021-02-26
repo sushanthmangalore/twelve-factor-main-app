@@ -42,6 +42,12 @@ def get_table_name():
     appconfig.update_config()
     return appconfig.config["TableName"]
 
+@app.route('/table-name')
+def table_name():
+    """
+     Return table name using API
+    """
+    return get_table_name()
 
 @app.route('/refresh-config')
 def refresh():
