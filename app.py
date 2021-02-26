@@ -12,31 +12,40 @@ appconfig = AppConfigHelper(
     os.environ['ConfigApp'],
     os.environ['ConfigEnv'],
     os.environ['ConfigProfile'],
-    3600,
+    3600,  # Auto refresh config every 1 hour
     os.environ['ConfigClient']
 )
 
 
 @app.route('/')
+def health():
+    return "All good !"
+
+
+@app.route('/hello')
 def hello_world():
-    ddb_client = boto3.client('dynamodb',
+    """Display hello message using the information from the Dynamo table
+        """
+    ddb_client = boto3.client('dynamodb',ß
                               region_name=os.environ['AWS_DEFAULT_REGION'])
     TABLE_NAME = get_table_name()
     try:
         response = ddb_client.get_item(
             TableName=TABLE_NAME, Key={'Application': {'S': 'TwelveFactorApp'}})
     except ClientError as e:
-        print(e.response['Error']['Message'])
-    else:
-        return f"Hello from {response['Item']['Name']['S']}"
+        return response['Error']['Message']
+    return f"Hello from {response['Item']['Name']['S']}"
 
 
 def get_table_name():
     appconfig.update_config()
     return appconfig.config["TableName"]
 
+
 @app.route('/refresh-config')
 def refresh():
+     """Force refresh config using the API endpoint
+        """
     result = "Config Refreshed" if appconfig.update_config(force=True) else "Nothing to refresh"
     return result
 
