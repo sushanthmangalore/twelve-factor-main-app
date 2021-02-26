@@ -24,17 +24,18 @@ def health():
 
 @app.route('/hello')
 def hello_world():
-    """Display hello message using the information from the Dynamo table
-        """
-    ddb_client = boto3.client('dynamodb',
-                              region_name=os.environ['AWS_DEFAULT_REGION'])
+    """
+    Display hello message using the information from the Dynamo table
+    """
+    ddb_client = boto3.client(
+        'dynamodb', region_name=os.environ['AWS_DEFAULT_REGION'])
     TABLE_NAME = get_table_name()
     try:
         response = ddb_client.get_item(
             TableName=TABLE_NAME, Key={'Application': {'S': 'TwelveFactorApp'}})
+        return f"Hello from {response['Item']['Name']['S']}"
     except ClientError as e:
         return response['Error']['Message']
-    return f"Hello from {response['Item']['Name']['S']}"
 
 
 def get_table_name():
@@ -44,9 +45,11 @@ def get_table_name():
 
 @app.route('/refresh-config')
 def refresh():
-     """Force refresh config using the API endpoint
-        """
-    result = "Config Refreshed" if appconfig.update_config(force=True) else "Nothing to refresh"
+    """
+     Force refresh config using the API endpoint
+    """
+    result = "Config Refreshed" if appconfig.update_config(
+        force=True) else "Nothing to refresh"
     return result
 
 
