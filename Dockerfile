@@ -12,6 +12,7 @@ RUN pip install -r requirements.txt
 
 COPY . /app
 
-ENTRYPOINT [ "python" ]
+EXPOSE 80
 
+ENTRYPOINT [ "python" ]
 CMD [ "app.py" ]
