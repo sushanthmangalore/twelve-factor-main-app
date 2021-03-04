@@ -33,7 +33,8 @@ def hello_world():
     try:
         response = ddb_client.get_item(
             TableName=TABLE_NAME, Key={'Application': {'S': 'TwelveFactorApp'}})
-        return f"Hello from {response['Item']['Name']['S']}"
+        return f"Hello from {response['Item']['Name']['S']}. Developed with
+        {response['Item']['Language']['S']}, deployed with {response['Item']['Platform']['S']}"
     except ClientError as e:
         return response['Error']['Message']
 
@@ -42,12 +43,14 @@ def get_table_name():
     appconfig.update_config()
     return appconfig.config["TableName"]
 
+
 @app.route('/table-name')
 def table_name():
     """
      Return table name using API
     """
     return get_table_name()
+
 
 @app.route('/refresh-config')
 def refresh():
