@@ -1154,8 +1154,15 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - ecs:RunTask
+                Resource: '*'
+                Condition:
+                  StringLike: 
+                    'iam:PassedToService': "ecs-tasks.amazonaws.com"
+              - Effect: Allow
+                Action:
                   - iam:PassRole
-                Resource: !GetAtt ECSTaskRole.Arn
+                Resource: '*'
   AdminTaskCloudWatchEventRule:
     Type: AWS::Events::Rule
     Properties:
