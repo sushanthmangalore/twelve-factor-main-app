@@ -33,18 +33,18 @@ Parameters:
     Type: String
     Default: "twelvefactor-app-main-repo"
     Description: "Name of the ECR repository."
-  ServiceName:
+  ECSServiceName:
     Type: String
     Default: twelve-factor-app-service
     Description: A name for the service
-  ClusterName:
+  ECSClusterName:
     Type: String
     Default: twelve-factor-app
     Description: A name for the cluster
   ProjectName:
     Type: String
     Description: The name of the project.
-    Default: twelve-factor-app-demo
+    Default: twelve-factor-app
   ContainerPort:
     Type: Number
     Default: 80
@@ -280,7 +280,7 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: !Sub ${ClusterName}-${EnvironmentName}
+      ClusterName: !Sub ${ECSClusterName}-${EnvironmentName}
   ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -343,7 +343,7 @@ Resources:
       Description: Ingress from the public ALB
       GroupId: !Ref ContainerSecurityGroup
       IpProtocol: tcp
-      SourceSecurityGroupId: !Ref PublicLoadBalancerSG
+      SourceSecurityGroupId: !Ref ECSPublicLoadBalancerSG
       FromPort: 80
       ToPort: 80
   ECSPublicLoadBalancerSG:
@@ -366,10 +366,10 @@ Resources:
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
-      SecurityGroups: [!Ref PublicLoadBalancerSG]
+      SecurityGroups: [!Ref ECSPublicLoadBalancerSG]
       Tags:
         - Key: "Name"
-          Value: !Sub ${ServiceName}:LB
+          Value: !Sub ${ECSServiceName}:LB
   DummyTargetGroupPublic:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -382,24 +382,24 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref TwelveFactorAppVPC
-  PublicLoadBalancerListener:
+  ECSPublicLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref DummyTargetGroupPublic
           Type: "forward"
-      LoadBalancerArn: !Ref "PublicLoadBalancer"
+      LoadBalancerArn: !Ref "ECSPublicLoadBalancer"
       Port: 80
       Protocol: HTTP
   TwelveFactorAppCWLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub TwelveFactorApp-${EnvironmentName}-service-${ServiceName}
-  EcsTaskDefinition:
+      LogGroupName: !Sub TwelveFactorApp-${EnvironmentName}-service-${ECSServiceName}
+  ECSTaskDefinition:
     DependsOn: ECRRepository
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Ref ServiceName
+      Family: !Ref ECSServiceName
       Cpu: !Ref ContainerCpu
       Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
@@ -408,7 +408,7 @@ Resources:
       ExecutionRoleArn: !GetAtt "ECSTaskExecutionRole.Arn"
       TaskRoleArn: !GetAtt "ECSTaskRole.Arn"
       ContainerDefinitions:
-        - Name: !Ref ServiceName
+        - Name: !Ref ECSServiceName
           Cpu: !Ref ContainerCpu
           Memory: !Ref ContainerMemory
           Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepositoryName}"
@@ -417,9 +417,9 @@ Resources:
           LogConfiguration:
             LogDriver: "awslogs"
             Options:
-              awslogs-group: !Sub TwelveFactorApp-${EnvironmentName}-service-${ServiceName}
+              awslogs-group: !Sub TwelveFactorApp-${EnvironmentName}-service-${ECSServiceName}
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: !Ref ServiceName
+              awslogs-stream-prefix: !Ref ECSServiceName
           Environment: 
             - Name: AWS_DEFAULT_REGION
               Value: !Sub ${AWS::Region}
@@ -431,11 +431,11 @@ Resources:
               Value: !Ref ConfigProfile
             - Name: ConfigClient
               Value: !Ref ConfigClient
-  Service:
+  ECSService:
     Type: AWS::ECS::Service
     DependsOn: [LoadBalancerRule, CodeCommitRepo]
     Properties:
-      ServiceName: !Ref "ServiceName"
+      ServiceName: !Ref "ECSServiceName"
       Cluster: !Ref 'ECSCluster'
       LaunchType: FARGATE
       DeploymentConfiguration:
@@ -449,12 +449,12 @@ Resources:
           Subnets:
             - !Ref PrivateSubnet1
             - !Ref PrivateSubnet2
-      TaskDefinition: !Ref "TaskDefinition"
+      TaskDefinition: !Ref "ECSTaskDefinition"
       LoadBalancers:
-        - ContainerName: !Ref "ServiceName"
+        - ContainerName: !Ref "ECSServiceName"
           ContainerPort: 80
-          TargetGroupArn: !Ref "TargetGroup"
-  TargetGroup:
+          TargetGroupArn: !Ref "ECSServiceTargetGroup"
+  ECSServiceTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckIntervalSeconds: 12
@@ -463,7 +463,7 @@ Resources:
       HealthCheckTimeoutSeconds: 10
       HealthyThresholdCount: 2
       TargetType: ip
-      Name: !Ref "ServiceName"
+      Name: !Ref "ECSServiceName"
       Port: !Ref "ContainerPort"
       Protocol: HTTP
       UnhealthyThresholdCount: 2
@@ -472,12 +472,12 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref ECSServiceTargetGroup
           Type: "forward"
       Conditions:
         - Field: path-pattern
           Values: [!Ref Path]
-      ListenerArn: !Ref PublicLoadBalancerListener
+      ListenerArn: !Ref ECSPublicLoadBalancerListener
       Priority: !Ref Priority
   SourceCodeBucket:
     Type: AWS::S3::Bucket
@@ -652,7 +652,7 @@ Resources:
                     - !Ref AppPipeline
   AppPipelineCloudWatchEventRule:
     Type: 'AWS::Events::Rule'
-    DependsOn: Service
+    DependsOn: ECSService
     Properties:
       EventPattern:
         source:
@@ -736,8 +736,8 @@ Resources:
                 Version: 1
                 Provider: ECS
               Configuration:
-                ClusterName: !Ref ClusterName
-                ServiceName: !Ref ServiceName
+                ClusterName: !Ref ECSClusterName
+                ServiceName: !Ref ECSServiceName
                 FileName: images.json
               InputArtifacts:
                 - Name: BuildOutput
@@ -876,8 +876,8 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource:
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}-build-package
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}-build-package:*                  
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}-Build-Package
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ProjectName}-Build-Package:*                  
               - Effect: Allow
                 Action:
                   - s3:*
@@ -1003,7 +1003,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - dynamodb:PutItem
-                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${TableName}*
               - Effect: Allow
                 Action:
                   - logs:*
@@ -1036,7 +1036,7 @@ Resources:
           };
       Handler: index.handler
       Role:
-        Fn::GetAtt: [ DDBInitLambdaRole , "Arn" ]
+        Fn::GetAtt: [ DynamoDBInitLambdaRole , "Arn" ]
       Runtime: nodejs12.x
       Timeout: 60
   DynamoDBTable:
@@ -1057,7 +1057,7 @@ Resources:
     DependsOn: DynamoDBTable
     Properties:
       ServiceToken:
-         Fn::GetAtt: [ DDBInitFunction , "Arn" ]
+         Fn::GetAtt: [ DynamoDBInitFunction , "Arn" ]
       DynamoTableName: !Sub ${TableName}-${EnvironmentName}
   TwelveFactorAppEnv:
     Type: AWS::AppConfig::Environment
@@ -1104,8 +1104,8 @@ Resources:
       EnvironmentId: !Ref TwelveFactorAppEnv
       ConfigurationVersion: !Ref TwelveFactorConfigVersion
       ApplicationId: !Ref TwelveFactorApp
-  AdminTaskDefinition:
-    DependsOn: [DynamoDBTable, TwelveFactorApp, Service]
+  ECSAdminTaskDefinition:
+    DependsOn: [DynamoDBTable, TwelveFactorApp, ECSService]
     Type: AWS::ECS::TaskDefinition
     Properties:
       Cpu: !Ref ContainerCpu
@@ -1127,13 +1127,13 @@ Resources:
             Options:
               awslogs-group: !Sub TwelveFactorApp-${EnvironmentName}-task-adminproc
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: !Ref ServiceName
+              awslogs-stream-prefix: !Ref ECSClusterName
           Environment: 
             - Name: AWS_DEFAULT_REGION
               Value: !Sub ${AWS::Region}
             - Name: MAIN_APP_ENDPOINT
-              Value: !GetAtt PublicLoadBalancer.DNSName
-  AdminTaskLogGroup:
+              Value: !GetAtt ECSPublicLoadBalancer.DNSName
+  ECSAdminTaskCWLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub TwelveFactorApp-${EnvironmentName}-task-adminproc
@@ -1170,10 +1170,10 @@ Resources:
       ScheduleExpression: cron(0 0 * * ? *)
       State: ENABLED
       Targets:
-        - Id: !Sub '${ServiceName}-Admin-Task'
+        - Id: !Sub '${ECSClusterName}-Admin-Task'
           RoleArn: !GetAtt AdminTaskEventsRole.Arn
           EcsParameters:
-            TaskDefinitionArn: !Ref AdminTaskDefinition
+            TaskDefinitionArn: !Ref ECSAdminTaskDefinition
             TaskCount: 1
             LaunchType: 'FARGATE'
             PlatformVersion: 'LATEST'
@@ -1191,4 +1191,4 @@ Outputs:
     Value: !Ref ECSCluster
   LoadBalancerDNS:
     Description: The DNSName of the backup load balancer
-    Value: !Sub ${PublicLoadBalancer.DNSName}/hello
+    Value: !Sub ${ECSPublicLoadBalancer.DNSName}/hello
