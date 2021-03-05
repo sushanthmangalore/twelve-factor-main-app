@@ -736,7 +736,7 @@ Resources:
                 Version: 1
                 Provider: ECS
               Configuration:
-                ClusterName: !Ref ECSClusterName
+                ClusterName: !Sub ${ECSClusterName}-${EnvironmentName}
                 ServiceName: !Ref ECSServiceName
                 FileName: images.json
               InputArtifacts:

@@ -1,7 +1,7 @@
-FROM python:3
+FROM python:3-alpine
 
-RUN apt-get update -y && \
-    apt-get install -y python-pip python-dev
+RUN apk update && \
+    apk add --no-cache --update py3-pip python3-dev
 
 # We copy just the requirements.txt first to leverage Docker cache
 COPY ./requirements.txt /app/requirements.txt
