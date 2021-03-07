@@ -8,11 +8,13 @@ from botocore.exceptions import ClientError
 
 app = Flask(__name__)
 
+CONFIG_REFRESH_TIME = 3600
+
 appconfig = AppConfigHelper(
     os.environ['ConfigApp'],
     os.environ['ConfigEnv'],
     os.environ['ConfigProfile'],
-    3600,  # Auto refresh config every 1 hour
+    CONFIG_REFRESH_TIME,  # Auto refresh config every 1 hour
     os.environ['ConfigClient']
 )
 
@@ -33,7 +35,7 @@ def hello_world():
     try:
         response = ddb_client.get_item(
             TableName=TABLE_NAME, Key={'Application': {'S': 'TwelveFactorApp'}})
-        return f"Hello from {response['Item']['Name']['S']}. Developed with {response['Item']['Language']['S']}, deployed with {response['Item']['Platform']['S']}"
+        return f"Hello from {response['Item']['Name']['S']}.\n\nDeveloped with {response['Item']['Language']['S']}, deployed with {response['Item']['Platform']['S']}"
     except ClientError as e:
         return response['Error']['Message']
 

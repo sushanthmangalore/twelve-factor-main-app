@@ -1084,8 +1084,8 @@ Resources:
       ApplicationId: !Ref TwelveFactorApp
       ConfigurationProfileId: !Ref TwelveFactorConfigProfile
       Description: "Hosted configuration version for the Prod Environment"
-      Content: "{
-        \"TableName\": \"TwelveFactorDatastore\"
+      Content: !Sub "{
+        \"TableName\": \"${TableName}-${EnvironmentName}\"
       }"
       ContentType: "application/json"
   TwelveFactorDeploymentStrategy:
