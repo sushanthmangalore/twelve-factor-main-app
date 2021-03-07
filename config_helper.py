@@ -52,7 +52,7 @@ class AppConfigHelper:
         return self._config
 
     def update_config(self, force: bool = False) -> bool:
-        """Request the lastest configration.
+        """Request the latest configration.
         Returns True if a new version of configuration was received. False
         indicates that no attempt was made, or that no new version was found.
         """

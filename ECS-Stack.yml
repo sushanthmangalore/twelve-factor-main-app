@@ -419,7 +419,7 @@ Resources:
             Options:
               awslogs-group: !Sub TwelveFactorApp-${EnvironmentName}-service-${ECSServiceName}
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: !Ref ECSServiceName
+              awslogs-stream-prefix: !Ref ECSClusterName
           Environment: 
             - Name: AWS_DEFAULT_REGION
               Value: !Sub ${AWS::Region}
