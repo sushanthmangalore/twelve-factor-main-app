@@ -35,7 +35,7 @@ def hello_world():
     try:
         response = ddb_client.get_item(
             TableName=TABLE_NAME, Key={'Application': {'S': 'TwelveFactorApp'}})
-        return f"<html><body><p>Hello from {response['Item']['Name']['S']}.\n\nDeveloped with {response['Item']['Language']['S']}, deployed with {response['Item']['Platform']['S']}</p></body></html"
+        return f"<html><body><p>Hello from {response['Item']['Name']['S']}.</p><p>Developed with {response['Item']['Language']['S']}, deployed with {response['Item']['Platform']['S']}</p></body></html>"
     except ClientError as e:
         return response['Error']['Message']
 
